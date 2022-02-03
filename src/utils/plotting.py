@@ -6,6 +6,7 @@ import pandas as pd
 import cycler
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from textwrap import wrap
 from tueplots import bundles
 from .summarize import get_diffs, get_means
 
@@ -136,7 +137,7 @@ def plot_lines(
     ###
     for country in kwargs.get('selected', rdd_data['country'].unique()):
         # plot nrg_data
-        label1 = 'share of primary\nenergy from renewable\nsources'
+        label1 = 'share of primary energy from renewable sources'
         sub_data = (
             nrg_data[(nrg_data['country'] == country)]
             .sort_values(by='year')
@@ -158,7 +159,7 @@ def plot_lines(
         #avg_window = kwargs.get('avg_window', 1)
         y2_avg = y2.rolling(window=avg_window).mean()
         # plot non-averaged data
-        label2 = 'share of RD&D\nspending on renewable\nenergy technology'
+        label2 = 'share of RD&D spending on renewable energy technology'
         if avg_window != 1:
             label2 += ' (averaged)'
         if kwargs.get('plot_non_avg', False):
@@ -189,11 +190,14 @@ def plot_lines(
     )
     ax1.set_xlabel(f'Time for {label1}')
     ax2.set_xlabel(f'Time for {label2}')
-    ax1.set_ylabel('%') # global y-axis label
+    ax1.set_ylabel('Share in %') # global y-axis label
     ax1.set_title(kwargs.get('title', default_title))
     lin1, lab1 = ax1.get_legend_handles_labels()
     lin2, lab2, = ax2.get_legend_handles_labels()
-    ax1.legend(lin1 + lin2, lab1 +lab2,bbox_to_anchor=(1.0,1.0), loc='upper left')
+    labels = ['\n'.join(wrap(l, 10)) for l in lab1+lab2]
+    ax1.legend(
+        lin1 + lin2, labels, bbox_to_anchor=(1.0,1.0),
+        loc='upper left', labelspacing=1)
     ax1.grid(axis=kwargs.get('gridaxsis', 'y'))
     ax1.set_axisbelow(True)
 
@@ -251,7 +255,7 @@ def plot_lines_global(
     fig, ax1 = plt.subplots(figsize=kwargs.get('figsize', (10,8)))
     ax2 = ax1.twiny() # create twin y axis
     # ax1 for nrg_data
-    label1 = 'share of primary\nenergy from renewable\nsources'
+    label1 = 'share of primary energy from renewable sources'
     ymax1 = kwargs.get('ymax1',max(nrg_data['year'].unique()))
     ymin1 = ymax1 - t_window
     assert ymin1 >= min(nrg_data['year'].unique()), \
@@ -268,7 +272,7 @@ def plot_lines_global(
     ax1.set_xticks(x_ticks)
     ax1.set_xticklabels(x_ticks, rotation=45)
     # ax2 for rdd_data
-    label2 = 'share of RD&D\nspending on renewable\nenergy technology'
+    label2 = 'share of RD&D spending on renewable energy technology'
     ymax2 = ymax1 - y_shift
     ymin2 = ymax2 - t_window
     assert ymin2 >= min(rdd_data['year'].unique()), \
@@ -296,11 +300,15 @@ def plot_lines_global(
     )
     ax1.set_xlabel(f'Time for {label1}')
     ax2.set_xlabel(f'Time for {label2}')
-    ax1.set_ylabel('%') # global y-axis label
+    ax1.set_ylabel('Share in %') # global y-axis label
     ax1.set_title(kwargs.get('title', default_title))
     lin1, lab1 = ax1.get_legend_handles_labels()
     lin2, lab2, = ax2.get_legend_handles_labels()
-    ax1.legend(lin1 + lin2, lab1 +lab2,bbox_to_anchor=(1.0,1.0), loc='upper left')
+    labels = ['\n'.join(wrap(l, 10)) for l in lab1+lab2]
+    ax1.legend(
+        lin1 + lin2, labels, bbox_to_anchor=(1.0,1.0),
+        loc='upper left', labelspacing=1)
+
     ax1.grid(axis=kwargs.get('gridaxsis', 'y'))
     ax1.set_axisbelow(True)
 
