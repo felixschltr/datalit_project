@@ -1,4 +1,5 @@
-
+from ctypes.wintypes import tagRECT
+import os
 from turtle import color
 from typing import List
 import numpy as np
@@ -7,11 +8,14 @@ import cycler
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from textwrap import wrap
+import tueplots
 from tueplots import bundles
 from .summarize import get_diffs, get_means
 
 # tueplots settings
-# mpl.rcParams.update(bundles.neurips2021(usetex=False))
+plt.rcParams.update(bundles.neurips2021(usetex=True, family="serif"))
+default_fs = tueplots.bundles.neurips2021()['figure.figsize']
+textsize = tueplots.bundles.neurips2021()['xtick.labelsize']
 # color settings
 mpl.rcParams['axes.prop_cycle'] = cycler.cycler('color', plt.cm.tab20.colors)
 
@@ -26,7 +30,7 @@ def plot_means_vs_diffs(
     coi_nrg : str,
     **kwargs
 ):
-    fig, ax = plt.subplots(figsize=kwargs.get('figsize', (10,8)))
+    fig, ax = plt.subplots(figsize=kwargs.get('figsize', default_fs))
     # get differences in share of renewables in energy data
     diff_df = get_diffs(nrg_data, ymin=ymin_nrg, ymax=ymax_nrg, coi=coi_nrg)
     # get means in share of renewables in RD&D data
@@ -48,7 +52,7 @@ def plot_means_vs_diffs(
             x + kwargs.get('text_offset_x', - (len(country) * 5 / 20)),
             y + kwargs.get('text_offset_y', 0.4),
             country,
-            fontsize = kwargs.get('text_fontsize', 9)
+            fontsize = textsize
             )
     # add correlation annotation
     if kwargs.get('correl', True):
@@ -56,40 +60,50 @@ def plot_means_vs_diffs(
             x_corr + 0.05,
             y_corr - 0.05,
             f'Pearson $r$ = {round(pearson_r, 3)}',
-            fontsize = 12
+            fontsize = 9
             )
     ax.set_title(
-        kwargs.get('title', 'RD&D spending vs. share of energy from renewable sources')
+        kwargs.get('title', 'RD\&D spending vs. share of energy from renewable sources')
     )
     ax.set_ylabel(
-        kwargs.get('x_label', f'Difference in share of energy from renewable sources between {ymin_nrg} and {ymax_nrg}\n(in %)')
+        kwargs.get('x_label', f'Difference in share of energy from renewable\nsources between {ymin_nrg} and {ymax_nrg}\n(in \%)')
     )
     ax.set_xlabel(
-        kwargs.get('y_label', f'Mean share of total Energy Technology RD&D Budget invested in\nrenewable energy sources between {ymin_rdd} and {ymax_rdd}\n(in %)')
+        kwargs.get('y_label', f'Mean share of total Energy Technology RD\&D Budget invested in\nrenewable energy sources between {ymin_rdd} and {ymax_rdd}\n(in \%)')
     )
     ax.grid(axis=kwargs.get('gridaxis', 'both'))
     ax.set_axisbelow(True)
+    if kwargs.get('save', False):
+            # set directory for saving
+            dirname = os.path.dirname(__file__)
+            save_loc = os.path.join(dirname, kwargs.get('path', '../../gfx'))
+            # create if not already existing
+            if not os.path.exists(save_loc):
+                os.makedirs(save_loc)
+            fname = os.path.join(save_loc, 'rdd_vs_nrg_scatter_total.pdf')
+            plt.savefig(fname=fname, dpi=300)
+
 
 def plot_rdd(rdd_data : pd.DataFrame, **kwargs):
     """
-    Create plot of RD&D data for each country with year on the x-axis and
+    Create plot of RD\&D data for each country with year on the x-axis and
     share of budget invested in renewable energy sources on y-axis.
 
     Parameters
     ----------
-    rdd_data: data on RD&D spending per country
+    rdd_data: data on RD\&D spending per country
 
     Keyword arguments:
     avg_window: {int} year window for computing rolling average
         defaults to 1, i.e. no averaging
-    figsize: {tuple of int} defaults to (10,8)
+    figsize: {tuple of int} defaults to tuebplots neurips21 figsize
     selected: {list/iterable of strings} selection of countries to plot
     plot_non_avg {boolean}: when True, plots true signal in background
     alpha {scalar} : transparency of ture signal (if plotted)
     gridaxis {str} : defaults to 'y'
 
     """
-    fig, ax = plt.subplots(figsize=kwargs.get('figsize', (10,8)))
+    fig, ax = plt.subplots(figsize=kwargs.get('figsize', default_fs))
     for country in kwargs.get('selected', rdd_data['country'].unique()):
         sub_data = (
             rdd_data[(rdd_data['country'] == country)]
@@ -102,9 +116,9 @@ def plot_rdd(rdd_data : pd.DataFrame, **kwargs):
         ax.plot(x, y_avg, '-o', label=country)
         if kwargs.get('plot_non_avg', False):
             ax.plot(x, y, ls='--',alpha=kwargs.get('alpha', 0.6))
-    ax.set_title('Share of energy technology RD&D budget invested in renewable energy sources\nby country and  year')
+    ax.set_title('Share of energy technology RD\&D budget invested in renewable energy sources\nby country and  year')
     ax.set_xlabel('Year')
-    ylab = 'Share of RD&D budget invested in renewable energy sources (in %)'
+    ylab = 'Share of RD\&D budget invested in renewable energy sources (in \%)'
     if avg_window != 1:
         ylab += f'\naveraged over windows of {avg_window} years'
     ax.set_ylabel(ylab)
@@ -120,7 +134,7 @@ def plot_lines(
     avg_window = 1,
     **kwargs
     ):
-    fig, ax1 = plt.subplots(figsize=kwargs.get('figsize', (10,8)))
+    fig, ax1 = plt.subplots(figsize=kwargs.get('figsize', default_fs))
     ax2 = ax1.twiny() # create twin y axis
     # ax1 for nrg_data
     ymax1 = kwargs.get('ymax1',max(nrg_data['year'].unique()))
@@ -135,7 +149,8 @@ def plot_lines(
         f"bounds of available data exceeded!"
     rdd_data = rdd_data[rdd_data['year'].isin(range(ymin2, ymax2+1))]
     ###
-    for country in kwargs.get('selected', rdd_data['country'].unique()):
+    selected = kwargs.get('selected', rdd_data['country'].unique())
+    for country in selected:
         # plot nrg_data
         label1 = 'share of primary energy from renewable sources'
         sub_data = (
@@ -159,11 +174,11 @@ def plot_lines(
         #avg_window = kwargs.get('avg_window', 1)
         y2_avg = y2.rolling(window=avg_window).mean()
         # plot non-averaged data
-        label2 = 'share of RD&D spending on renewable energy technology'
+        label2 = 'share of RD\&D spending on renewable energy technology'
         if avg_window != 1:
             label2 += ' (averaged)'
         if kwargs.get('plot_non_avg', False):
-            ax2.plot(x2, y2, ls='--',alpha=kwargs.get('alpha', 0.6), c='C2', label='share RD&D non-average')
+            ax2.plot(x2, y2, ls='--',alpha=kwargs.get('alpha', 0.6), c='C2', label='share RD\&D non-average')
         # plot averaged data
         ax2.plot(x2, y2_avg, '-o', c='C2', label=label2)
         # ax2 formatting
@@ -184,13 +199,13 @@ def plot_lines(
                 )
     # global formatting
     default_title = (
-        'Share of RD&D budged invested in renewable energy sources\nvs.'+
+        'Share of RD\&D budged invested in renewable energy sources\nvs.'+
         '\nShare of renewables in primary energy\ntime shifted'+
         f'by {y_shift} years'
     )
     ax1.set_xlabel(f'Time for {label1}')
     ax2.set_xlabel(f'Time for {label2}')
-    ax1.set_ylabel('Share in %') # global y-axis label
+    ax1.set_ylabel('Share in \%') # global y-axis label
     ax1.set_title(kwargs.get('title', default_title))
     lin1, lab1 = ax1.get_legend_handles_labels()
     lin2, lab2, = ax2.get_legend_handles_labels()
@@ -200,6 +215,18 @@ def plot_lines(
         loc='upper left', labelspacing=1)
     ax1.grid(axis=kwargs.get('gridaxsis', 'y'))
     ax1.set_axisbelow(True)
+    if kwargs.get('save', False):
+        # set directory for saving
+        dirname = os.path.dirname(__file__)
+        save_loc = os.path.join(dirname, kwargs.get('path', '../../gfx'))
+        # create if not already existing
+        if not os.path.exists(save_loc):
+            os.makedirs(save_loc)
+        name = '_'.join(selected)
+        fname = os.path.join(save_loc, f'rdd_vs_nrg_lines_{name}.pdf')
+        plt.savefig(fname=fname, dpi=300)
+
+
 
 def get_mean_std(data : pd.DataFrame, selected : List[str], coi : str) -> pd.DataFrame:
     """
@@ -233,7 +260,7 @@ def get_mean_std(data : pd.DataFrame, selected : List[str], coi : str) -> pd.Dat
     merged_df.rename(columns={f'{coi}_x':'mean', f'{coi}_y':'std'}, inplace=True)
     return merged_df
 
-def plot_lines_global(
+def plot_lines_total(
     rdd_data,
     nrg_data,
     t_window : int = 10,
@@ -241,7 +268,7 @@ def plot_lines_global(
     **kwargs
     ):
     # formatting of error bars
-    elinewidt = kwargs.get('elinewidt', 1)
+    elinewidth = kwargs.get('elinewidth', 1)
     capsize = kwargs.get('capsize', 2)
     # select countries
     selected = kwargs.get('selected', rdd_data['country'].unique())
@@ -252,8 +279,9 @@ def plot_lines_global(
     nrg_coi = kwargs.get('nrg_coi','prim_nrg_share_renewables')
     nrg_data = get_mean_std(nrg_data, selected, nrg_coi)
     ## acutal plotting
-    fig, ax1 = plt.subplots(figsize=kwargs.get('figsize', (10,8)))
-    ax2 = ax1.twiny() # create twin y axis
+    fig, ax1 = plt.subplots(figsize=kwargs.get('figsize', default_fs))
+    # use on x-axis of two depending on parameter y_shift
+    ax2 = (ax1 if y_shift == 0 else ax1.twiny()) # create twin y axis
     # ax1 for nrg_data
     label1 = 'share of primary energy from renewable sources'
     ymax1 = kwargs.get('ymax1',max(nrg_data['year'].unique()))
@@ -265,14 +293,14 @@ def plot_lines_global(
     y1 = nrg_data['mean']
     y1err = nrg_data['std']
     ax1.errorbar(
-        x1, y1, y1err, fmt='-s', elinewidth=elinewidt,
+        x1, y1, y1err, fmt='-s', elinewidth=elinewidth,
         capsize=capsize, color='C0', label=label1)
     # ax1 formatting
     x_ticks = [int(y) for y in x1]
     ax1.set_xticks(x_ticks)
     ax1.set_xticklabels(x_ticks, rotation=45)
     # ax2 for rdd_data
-    label2 = 'share of RD&D spending on renewable energy technology'
+    label2 = 'share of RD\&D spending on renewable energy technology'
     ymax2 = ymax1 - y_shift
     ymin2 = ymax2 - t_window
     assert ymin2 >= min(rdd_data['year'].unique()), \
@@ -282,7 +310,7 @@ def plot_lines_global(
     y2 = rdd_data['mean']
     y2err = rdd_data['std']
     ax2.errorbar(
-        x2, y2, y2err, fmt='-o', elinewidth=elinewidt,
+        x2, y2, y2err, fmt='-o', elinewidth=elinewidth,
         capsize=capsize, color='C2', label=label2)
     # ax2 formatting
     x_ticks = [int(y) for y in x2]
@@ -292,23 +320,162 @@ def plot_lines_global(
     if kwargs.get('fill_error', False):
         ax1.fill_between(x1, y1+y1err,y1-y1err, color='C0', alpha=0.1)
         ax2.fill_between(x2, y2+y2err,y2-y2err, color='C2', alpha=0.1)
+    # add correlation
+    if kwargs.get('correl', False):
+        r = np.corrcoef(y1, y2)[0][1]
+        x_corr = ax1.get_xticks()[0]
+        y_corr = ax1.get_yticks()[-2]
+        ax1.text(
+            x_corr,
+            y_corr + 2 ,
+            f'Pearson $r$ = {round(r, 2)}',
+            fontsize=9
+        )
+    # optional formatting
+    if y_shift == 0: # applies if signals are not time-shifted
+        ax1.set_xlabel('Time')
+        lin1, lab1 = ax1.get_legend_handles_labels()
+        labels = ['\n'.join(wrap(l, 10)) for l in lab1]
+        ax1.legend(
+            lin1, labels, bbox_to_anchor=(1.0,1.0),
+            loc='upper left', labelspacing=1)
+    else: # applies if singals are time-shifted
+        ax1.set_xlabel(f'Time for {label1}')
+        ax2.set_xlabel(f'Time for {label2}')
+        lin1, lab1 = ax1.get_legend_handles_labels()
+        lin2, lab2, = ax2.get_legend_handles_labels()
+        labels = ['\n'.join(wrap(l, 10)) for l in lab1+lab2]
+        ax1.legend(
+            lin1 + lin2, labels, bbox_to_anchor=(1.0,1.0),
+            loc='upper left', labelspacing=1)
     # global formatting
     default_title = (
-        'Share of RD&D budged invested in renewable energy sources\nvs.'+
+        'Share of RD\&D budged invested in renewable energy sources\nvs.'+
         '\nShare of renewables in primary energy\ntime shifted'+
         f'by {y_shift} years'
     )
-    ax1.set_xlabel(f'Time for {label1}')
-    ax2.set_xlabel(f'Time for {label2}')
-    ax1.set_ylabel('Share in %') # global y-axis label
     ax1.set_title(kwargs.get('title', default_title))
-    lin1, lab1 = ax1.get_legend_handles_labels()
-    lin2, lab2, = ax2.get_legend_handles_labels()
-    labels = ['\n'.join(wrap(l, 10)) for l in lab1+lab2]
-    ax1.legend(
-        lin1 + lin2, labels, bbox_to_anchor=(1.0,1.0),
-        loc='upper left', labelspacing=1)
-
+    ax1.set_ylabel('Share in \%') # global y-axis label
     ax1.grid(axis=kwargs.get('gridaxsis', 'y'))
     ax1.set_axisbelow(True)
+    if kwargs.get('save', False):
+        # set directory for saving
+        dirname = os.path.dirname(__file__)
+        save_loc = os.path.join(dirname, kwargs.get('path', '../../gfx'))
+        # create if not already existing
+        if not os.path.exists(save_loc):
+            os.makedirs(save_loc)
+        fname = os.path.join(save_loc, 'rdd_vs_nrg_lines_total.pdf')
+        plt.savefig(fname=fname, bbox_inches='tight', dpi=300)
+
+
+def plot_lines_total_b2b(
+    rdd_data,
+    nrg_data,
+    t_window : int =10,
+    y_shift : int = 10,
+    **kwargs
+):
+    with plt.rc_context(bundles.neurips2021(nrows=1, ncols=2, usetex=True, family="serif")):
+        # formatting of error bars
+        elinewidth = kwargs.get('elinewidth', 1)
+        capsize = kwargs.get('capsize', 2)
+        # select countries
+        selected = kwargs.get('selected', rdd_data['country'].unique())
+        ## get statistics for rdd_data
+        rdd_coi = kwargs.get('rdd_coi', 'share_budget_renewables')
+        rdd_data = get_mean_std(rdd_data, selected, rdd_coi)
+        ## get statistics for nrg_data
+        nrg_coi = kwargs.get('nrg_coi','prim_nrg_share_renewables')
+        nrg_data = get_mean_std(nrg_data, selected, nrg_coi)
+        ## acutal plotting
+        fig, axs = plt.subplots(
+            nrows=1,
+            ncols=2,
+            sharey= True,
+            figsize=kwargs.get('figsize', default_fs)
+            )
+        #######
+        ax0 = axs[0]
+        ymin = max(min(rdd_data['year'].unique()), min(nrg_data['year'].unique()))
+        for data, col, fmt in [(nrg_data, 'C0', '-s'), (rdd_data, 'C2', '-o')]:
+            data = data[data['year'] >= ymin]
+            x = data['year']
+            y = data['mean']
+            yerr = data['std']
+            ax0.errorbar(
+                x, y, yerr, fmt=fmt, elinewidth=elinewidth,
+                capsize=capsize, color=col)
+            x_ticks = [int(y) for y in x]
+            ax0.set_xticks(x_ticks)
+            ax0.set_xticklabels(x_ticks, rotation=45)
+        #######
+        ax1 = axs[1]
+        ax1_2 = ax1.twiny()  # create twin y axis
+        # ax1 for nrg_data
+        label1 = 'share of primary energy from renewable sources'
+        ymax1 = kwargs.get('ymax1',max(nrg_data['year'].unique()))
+        ymin1 = ymax1 - t_window
+        assert ymin1 >= min(nrg_data['year'].unique()), \
+            f"bounds of available data exceeded!"
+        nrg_data = nrg_data[nrg_data['year'].isin(range(ymin1, ymax1+1))]
+        x1 = nrg_data['year']
+        y1 = nrg_data['mean']
+        y1err = nrg_data['std']
+        ax1.errorbar(
+            x1, y1, y1err, fmt='-s', elinewidth=elinewidth,
+            capsize=capsize, color='C0', label=label1)
+        # ax1 formatting
+        x_ticks = [int(y) for y in x1]
+        ax1.set_xticks(x_ticks)
+        ax1.set_xticklabels(x_ticks, rotation=45)
+        # ax2 for rdd_data
+        label2 = 'share of RD\&D spending on renewable energy technology'
+        ymax2 = ymax1 - y_shift
+        ymin2 = ymax2 - t_window
+        assert ymin2 >= min(rdd_data['year'].unique()), \
+            f"bounds of available data exceeded!"
+        rdd_data = rdd_data[rdd_data['year'].isin(range(ymin2, ymax2+1))]
+        x2 = rdd_data['year']
+        y2 = rdd_data['mean']
+        y2err = rdd_data['std']
+        ax1_2.errorbar(
+            x2, y2, y2err, fmt='-o', elinewidth=elinewidth,
+            capsize=capsize, color='C2', label=label2)
+        # ax2 formatting
+        x_ticks = [int(y) for y in x2]
+        ax1_2.set_xticks(x_ticks)
+        ax1_2.set_xticklabels(x_ticks, rotation=45)
+        # fill error
+        if kwargs.get('fill_error', False):
+            ax1.fill_between(x1, y1+y1err,y1-y1err, color='C0', alpha=0.1)
+            ax1_2.fill_between(x2, y2+y2err,y2-y2err, color='C2', alpha=0.1)
+        # global formatting
+        default_title = (
+            'Share of RD\&D budged invested in renewable energy sources\nvs.'+
+            '\nShare of renewables in primary energy\ntime shifted'+
+            f'by {y_shift} years'
+        )
+        ax1.set_xlabel(f'Time for {label1}')
+        ax1_2.set_xlabel(f'Time for {label2}')
+        ax1.set_ylabel('Share in \%') # global y-axis label
+        ax1.set_title(kwargs.get('title', default_title))
+        lin1, lab1 = ax1.get_legend_handles_labels()
+        lin2, lab2, = ax1_2.get_legend_handles_labels()
+        labels = ['\n'.join(wrap(l, 10)) for l in lab1+lab2]
+        ax1.legend(
+            lin1 + lin2, labels, bbox_to_anchor=(1.0,1.0),
+            loc='upper left', labelspacing=1)
+
+        ax1.grid(axis=kwargs.get('gridaxsis', 'y'))
+        ax1.set_axisbelow(True)
+        if kwargs.get('save', False):
+            # set directory for saving
+            dirname = os.path.dirname(__file__)
+            save_loc = os.path.join(dirname, kwargs.get('path', '../../gfx'))
+            # create if not already existing
+            if not os.path.exists(save_loc):
+                os.makedirs(save_loc)
+            fname = os.path.join(save_loc, 'rdd_vs_nrg_lines_total.pdf')
+            plt.savefig(fname=fname, bbox_inches='tight', dpi=300)
 
